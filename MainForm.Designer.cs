@@ -55,7 +55,7 @@ namespace ImageDup
             this.lblTitle.FontWeight = MetroFramework.MetroLabelWeight.Bold;
             this.lblTitle.Location = new System.Drawing.Point(20, 60);
             this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(960, 40);
+            this.lblTitle.Size = new System.Drawing.Size(760, 40);
             this.lblTitle.TabIndex = 0;
             this.lblTitle.Text = "ImageDup - Détection automatique de doublons";
             this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -76,7 +76,7 @@ namespace ImageDup
             //
             this.lblSelectedFolder.Location = new System.Drawing.Point(240, 110);
             this.lblSelectedFolder.Name = "lblSelectedFolder";
-            this.lblSelectedFolder.Size = new System.Drawing.Size(740, 40);
+            this.lblSelectedFolder.Size = new System.Drawing.Size(540, 40);
             this.lblSelectedFolder.TabIndex = 2;
             this.lblSelectedFolder.Text = "Aucun dossier sélectionné";
             this.lblSelectedFolder.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -99,14 +99,14 @@ namespace ImageDup
             //
             this.progressBar.Location = new System.Drawing.Point(240, 165);
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(740, 30);
+            this.progressBar.Size = new System.Drawing.Size(540, 30);
             this.progressBar.TabIndex = 4;
             //
             // lblProgress
             //
             this.lblProgress.Location = new System.Drawing.Point(240, 195);
             this.lblProgress.Name = "lblProgress";
-            this.lblProgress.Size = new System.Drawing.Size(740, 20);
+            this.lblProgress.Size = new System.Drawing.Size(540, 20);
             this.lblProgress.TabIndex = 5;
             this.lblProgress.Text = "";
             this.lblProgress.TextAlign = System.Drawing.ContentAlignment.TopCenter;
@@ -127,7 +127,7 @@ namespace ImageDup
             this.dgvResults.ReadOnly = true;
             this.dgvResults.RowHeadersVisible = false;
             this.dgvResults.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvResults.Size = new System.Drawing.Size(960, 300);
+            this.dgvResults.Size = new System.Drawing.Size(760, 250);
             this.dgvResults.TabIndex = 6;
             this.dgvResults.SelectionChanged += new System.EventHandler(this.dgvResults_SelectionChanged);
             //
@@ -159,9 +159,9 @@ namespace ImageDup
             this.panelPreview.HorizontalScrollbarBarColor = true;
             this.panelPreview.HorizontalScrollbarHighlightOnWheel = false;
             this.panelPreview.HorizontalScrollbarSize = 10;
-            this.panelPreview.Location = new System.Drawing.Point(20, 545);
+            this.panelPreview.Location = new System.Drawing.Point(20, 495);
             this.panelPreview.Name = "panelPreview";
-            this.panelPreview.Size = new System.Drawing.Size(960, 330);
+            this.panelPreview.Size = new System.Drawing.Size(760, 280);
             this.panelPreview.TabIndex = 7;
             this.panelPreview.VerticalScrollbarBarColor = true;
             this.panelPreview.VerticalScrollbarHighlightOnWheel = false;
@@ -172,7 +172,7 @@ namespace ImageDup
             this.pictureBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pictureBox1.Location = new System.Drawing.Point(15, 15);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(450, 260);
+            this.pictureBox1.Size = new System.Drawing.Size(350, 210);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
@@ -180,9 +180,9 @@ namespace ImageDup
             // pictureBox2
             //
             this.pictureBox2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pictureBox2.Location = new System.Drawing.Point(490, 15);
+            this.pictureBox2.Location = new System.Drawing.Point(385, 15);
             this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(450, 260);
+            this.pictureBox2.Size = new System.Drawing.Size(350, 210);
             this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox2.TabIndex = 1;
             this.pictureBox2.TabStop = false;
@@ -191,7 +191,7 @@ namespace ImageDup
             //
             this.btnDeleteImage1.Enabled = false;
             this.btnDeleteImage1.FontSize = MetroFramework.MetroButtonSize.Medium;
-            this.btnDeleteImage1.Location = new System.Drawing.Point(165, 285);
+            this.btnDeleteImage1.Location = new System.Drawing.Point(115, 235);
             this.btnDeleteImage1.Name = "btnDeleteImage1";
             this.btnDeleteImage1.Size = new System.Drawing.Size(150, 30);
             this.btnDeleteImage1.TabIndex = 2;
@@ -203,7 +203,7 @@ namespace ImageDup
             //
             this.btnDeleteImage2.Enabled = false;
             this.btnDeleteImage2.FontSize = MetroFramework.MetroButtonSize.Medium;
-            this.btnDeleteImage2.Location = new System.Drawing.Point(640, 285);
+            this.btnDeleteImage2.Location = new System.Drawing.Point(485, 235);
             this.btnDeleteImage2.Name = "btnDeleteImage2";
             this.btnDeleteImage2.Size = new System.Drawing.Size(150, 30);
             this.btnDeleteImage2.TabIndex = 3;
@@ -215,7 +215,7 @@ namespace ImageDup
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1000, 895);
+            this.ClientSize = new System.Drawing.Size(800, 795);
             this.Controls.Add(this.panelPreview);
             this.Controls.Add(this.dgvResults);
             this.Controls.Add(this.lblProgress);

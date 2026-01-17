@@ -27,7 +27,7 @@ namespace ImageDup
         {
             try
             {
-                string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models", "openai.clip-vit-base-patch32.onnx");
+                string modelPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "openai.clip-vit-base-patch32.onnx");
                 comparisonService = new ImageComparisonService(modelPath);
             }
             catch (Exception ex)

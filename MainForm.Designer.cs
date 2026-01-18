@@ -31,7 +31,6 @@ namespace ImageDup
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.lblTitle = new MetroFramework.Controls.MetroLabel();
             this.btnSelectFolder = new MetroFramework.Controls.MetroButton();
             this.lblSelectedFolder = new MetroFramework.Controls.MetroLabel();
@@ -51,6 +50,8 @@ namespace ImageDup
             this.lblSize2 = new System.Windows.Forms.Label();
             this.btnDeleteImage1 = new MetroFramework.Controls.MetroButton();
             this.btnDeleteImage2 = new MetroFramework.Controls.MetroButton();
+            this.lblFileName1 = new System.Windows.Forms.Label();
+            this.lblFileName2 = new System.Windows.Forms.Label();
             this.panelPreview = new MetroFramework.Controls.MetroPanel();
             ((System.ComponentModel.ISupportInitialize)(this.dgvResults)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -218,79 +219,78 @@ namespace ImageDup
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Location = new System.Drawing.Point(13, 47);
+            this.pictureBox1.Location = new System.Drawing.Point(13, 41);
             this.pictureBox1.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(346, 186);
+            this.pictureBox1.Size = new System.Drawing.Size(346, 238);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
             // pictureBox2
             // 
-            this.pictureBox2.Location = new System.Drawing.Point(380, 47);
+            this.pictureBox2.Location = new System.Drawing.Point(380, 41);
             this.pictureBox2.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(346, 186);
+            this.pictureBox2.Size = new System.Drawing.Size(346, 238);
             this.pictureBox2.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox2.TabIndex = 1;
             this.pictureBox2.TabStop = false;
             // 
             // txtImagePath1
-            //
+            // 
             this.txtImagePath1.Font = new System.Drawing.Font("Segoe UI", 8F);
-            this.txtImagePath1.Location = new System.Drawing.Point(13, 8);
+            this.txtImagePath1.Location = new System.Drawing.Point(47, 10);
             this.txtImagePath1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.txtImagePath1.Name = "txtImagePath1";
             this.txtImagePath1.ReadOnly = true;
-            this.txtImagePath1.Size = new System.Drawing.Size(270, 25);
+            this.txtImagePath1.Size = new System.Drawing.Size(240, 25);
             this.txtImagePath1.TabIndex = 4;
             this.txtImagePath1.Visible = false;
             // 
             // txtImagePath2
-            //
+            // 
             this.txtImagePath2.Font = new System.Drawing.Font("Segoe UI", 8F);
-            this.txtImagePath2.Location = new System.Drawing.Point(380, 8);
+            this.txtImagePath2.Location = new System.Drawing.Point(414, 10);
             this.txtImagePath2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.txtImagePath2.Name = "txtImagePath2";
             this.txtImagePath2.ReadOnly = true;
-            this.txtImagePath2.Size = new System.Drawing.Size(270, 25);
+            this.txtImagePath2.Size = new System.Drawing.Size(240, 25);
             this.txtImagePath2.TabIndex = 5;
             this.txtImagePath2.Visible = false;
-            //
+            // 
             // lblSize1
-            //
+            // 
             this.lblSize1.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Bold);
             this.lblSize1.ForeColor = System.Drawing.Color.DimGray;
-            this.lblSize1.Location = new System.Drawing.Point(290, 8);
+            this.lblSize1.Location = new System.Drawing.Point(290, 10);
             this.lblSize1.Name = "lblSize1";
-            this.lblSize1.Size = new System.Drawing.Size(69, 25);
+            this.lblSize1.Size = new System.Drawing.Size(69, 22);
             this.lblSize1.TabIndex = 6;
             this.lblSize1.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.lblSize1.Visible = false;
-            //
+            // 
             // lblSize2
-            //
+            // 
             this.lblSize2.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Bold);
             this.lblSize2.ForeColor = System.Drawing.Color.DimGray;
-            this.lblSize2.Location = new System.Drawing.Point(657, 8);
+            this.lblSize2.Location = new System.Drawing.Point(657, 10);
             this.lblSize2.Name = "lblSize2";
-            this.lblSize2.Size = new System.Drawing.Size(69, 25);
+            this.lblSize2.Size = new System.Drawing.Size(69, 22);
             this.lblSize2.TabIndex = 7;
             this.lblSize2.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.lblSize2.Visible = false;
-            //
+            // 
             // btnDeleteImage1
             // 
             this.btnDeleteImage1.Enabled = false;
-            this.btnDeleteImage1.FontSize = MetroFramework.MetroButtonSize.Medium;
             this.btnDeleteImage1.FontWeight = MetroFramework.MetroButtonWeight.Regular;
-            this.btnDeleteImage1.Location = new System.Drawing.Point(87, 242);
-            this.btnDeleteImage1.Margin = new System.Windows.Forms.Padding(4);
+            this.btnDeleteImage1.Location = new System.Drawing.Point(13, 11);
+            this.btnDeleteImage1.Margin = new System.Windows.Forms.Padding(2);
             this.btnDeleteImage1.Name = "btnDeleteImage1";
-            this.btnDeleteImage1.Size = new System.Drawing.Size(200, 37);
+            this.btnDeleteImage1.Size = new System.Drawing.Size(30, 24);
             this.btnDeleteImage1.TabIndex = 2;
-            this.btnDeleteImage1.Text = "🗑️ Supprimer";
+            this.btnDeleteImage1.Text = "🗑️";
             this.btnDeleteImage1.UseSelectable = true;
             this.btnDeleteImage1.Visible = false;
             this.btnDeleteImage1.Click += new System.EventHandler(this.btnDeleteImage1_Click);
@@ -298,20 +298,43 @@ namespace ImageDup
             // btnDeleteImage2
             // 
             this.btnDeleteImage2.Enabled = false;
-            this.btnDeleteImage2.FontSize = MetroFramework.MetroButtonSize.Medium;
             this.btnDeleteImage2.FontWeight = MetroFramework.MetroButtonWeight.Regular;
-            this.btnDeleteImage2.Location = new System.Drawing.Point(453, 242);
-            this.btnDeleteImage2.Margin = new System.Windows.Forms.Padding(4);
+            this.btnDeleteImage2.Location = new System.Drawing.Point(380, 11);
+            this.btnDeleteImage2.Margin = new System.Windows.Forms.Padding(2);
             this.btnDeleteImage2.Name = "btnDeleteImage2";
-            this.btnDeleteImage2.Size = new System.Drawing.Size(200, 37);
+            this.btnDeleteImage2.Size = new System.Drawing.Size(30, 24);
             this.btnDeleteImage2.TabIndex = 3;
-            this.btnDeleteImage2.Text = "🗑️ Supprimer";
+            this.btnDeleteImage2.Text = "🗑️";
             this.btnDeleteImage2.UseSelectable = true;
             this.btnDeleteImage2.Visible = false;
             this.btnDeleteImage2.Click += new System.EventHandler(this.btnDeleteImage2_Click);
             // 
+            // lblFileName1
+            // 
+            this.lblFileName1.Font = new System.Drawing.Font("Segoe UI", 8F);
+            this.lblFileName1.ForeColor = System.Drawing.Color.Gray;
+            this.lblFileName1.Location = new System.Drawing.Point(13, 280);
+            this.lblFileName1.Name = "lblFileName1";
+            this.lblFileName1.Size = new System.Drawing.Size(346, 20);
+            this.lblFileName1.TabIndex = 8;
+            this.lblFileName1.TextAlign = System.Drawing.ContentAlignment.TopCenter;
+            this.lblFileName1.Visible = false;
+            // 
+            // lblFileName2
+            // 
+            this.lblFileName2.Font = new System.Drawing.Font("Segoe UI", 8F);
+            this.lblFileName2.ForeColor = System.Drawing.Color.Gray;
+            this.lblFileName2.Location = new System.Drawing.Point(380, 280);
+            this.lblFileName2.Name = "lblFileName2";
+            this.lblFileName2.Size = new System.Drawing.Size(346, 20);
+            this.lblFileName2.TabIndex = 9;
+            this.lblFileName2.TextAlign = System.Drawing.ContentAlignment.TopCenter;
+            this.lblFileName2.Visible = false;
+            // 
             // panelPreview
             // 
+            this.panelPreview.Controls.Add(this.lblFileName2);
+            this.panelPreview.Controls.Add(this.lblFileName1);
             this.panelPreview.Controls.Add(this.btnDeleteImage2);
             this.panelPreview.Controls.Add(this.btnDeleteImage1);
             this.panelPreview.Controls.Add(this.lblSize2);
@@ -381,6 +404,8 @@ namespace ImageDup
         private System.Windows.Forms.Label lblSize2;
         private MetroFramework.Controls.MetroButton btnDeleteImage1;
         private MetroFramework.Controls.MetroButton btnDeleteImage2;
+        private System.Windows.Forms.Label lblFileName1;
+        private System.Windows.Forms.Label lblFileName2;
         private MetroFramework.Controls.MetroPanel panelPreview;
     }
 }

@@ -107,18 +107,15 @@ namespace ImageDup
                 }
             }
 
-            // Désactiver les contrôles pendant l'analyse et afficher le sablier
+            // Désactiver certains contrôles pendant l'analyse
             isAnalyzing = true;
-            this.Cursor = Cursors.WaitCursor;
-            dgvResults.Cursor = Cursors.WaitCursor;
+            this.Cursor = Cursors.AppStarting; // Flèche avec sablier
+            dgvResults.Cursor = Cursors.AppStarting;
             btnSelectFolder.Enabled = false;
             btnAnalyze.Enabled = false;
             dgvResults.Rows.Clear();
             comparisonResults.Clear();
             ClearPreview();
-
-            // Désactiver l'événement SelectionChanged pendant l'analyse pour éviter le clignotement
-            dgvResults.SelectionChanged -= dgvResults_SelectionChanged;
 
             try
             {
@@ -175,28 +172,64 @@ namespace ImageDup
                                 // Mettre à jour l'UI dans le thread principal
                                 this.Invoke((MethodInvoker)delegate
                                 {
-                                    // Trouver la position d'insertion pour garder le tri par similarité décroissante
-                                    int insertIndex = 0;
-                                    for (int k = 0; k < comparisonResults.Count; k++)
+                                    // Sauvegarder la sélection actuelle
+                                    bool hadSelection = dgvResults.SelectedRows.Count > 0;
+                                    int selectedIndex = hadSelection ? dgvResults.SelectedRows[0].Index : -1;
+
+                                    // Désactiver temporairement l'événement pour éviter le clignotement
+                                    dgvResults.SelectionChanged -= dgvResults_SelectionChanged;
+
+                                    try
                                     {
-                                        if (result.SimilarityPercentage > comparisonResults[k].SimilarityPercentage)
+                                        // Trouver la position d'insertion pour garder le tri par similarité décroissante
+                                        int insertIndex = 0;
+                                        for (int k = 0; k < comparisonResults.Count; k++)
                                         {
-                                            insertIndex = k;
-                                            break;
+                                            if (result.SimilarityPercentage > comparisonResults[k].SimilarityPercentage)
+                                            {
+                                                insertIndex = k;
+                                                break;
+                                            }
+                                            insertIndex = k + 1;
                                         }
-                                        insertIndex = k + 1;
+
+                                        comparisonResults.Insert(insertIndex, result);
+
+                                        // Insérer la ligne à la bonne position dans le DataGridView
+                                        dgvResults.Rows.Insert(insertIndex,
+                                            result.Image1Name,
+                                            result.Image2Name,
+                                            $"{result.SimilarityPercentage:F2} %"
+                                        );
+                                        dgvResults.Rows[insertIndex].Tag = result;
+
+                                        // Gérer la sélection
+                                        if (hadSelection)
+                                        {
+                                            // Ajuster l'index si une ligne a été insérée avant
+                                            if (insertIndex <= selectedIndex)
+                                                selectedIndex++;
+
+                                            // Désélectionner la ligne nouvellement insérée
+                                            dgvResults.Rows[insertIndex].Selected = false;
+
+                                            // Restaurer la sélection de l'utilisateur
+                                            if (selectedIndex < dgvResults.Rows.Count)
+                                            {
+                                                dgvResults.Rows[selectedIndex].Selected = true;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Pas de sélection: désélectionner la ligne insérée
+                                            dgvResults.Rows[insertIndex].Selected = false;
+                                        }
                                     }
-
-                                    comparisonResults.Insert(insertIndex, result);
-
-                                    // Insérer la ligne à la bonne position dans le DataGridView
-                                    dgvResults.Rows.Insert(insertIndex,
-                                        result.Image1Name,
-                                        result.Image2Name,
-                                        $"{result.SimilarityPercentage:F2} %"
-                                    );
-                                    dgvResults.Rows[insertIndex].Tag = result;
-                                    dgvResults.ClearSelection();
+                                    finally
+                                    {
+                                        // Réactiver l'événement
+                                        dgvResults.SelectionChanged += dgvResults_SelectionChanged;
+                                    }
 
                                     lock (lockObj)
                                     {
@@ -216,7 +249,6 @@ namespace ImageDup
 
                 lblProgress.Text = $"Analyse terminée ! {comparisonResults.Count} comparaisons effectuées.";
                 progressBar.Value = progressBar.Maximum;
-                dgvResults.ClearSelection();
             }
             catch (Exception ex)
             {
@@ -227,9 +259,6 @@ namespace ImageDup
             }
             finally
             {
-                // Réactiver l'événement SelectionChanged
-                dgvResults.SelectionChanged += dgvResults_SelectionChanged;
-
                 // Réactiver les contrôles et restaurer le curseur normal
                 this.Cursor = Cursors.Default;
                 dgvResults.Cursor = Cursors.Default;
@@ -361,6 +390,12 @@ namespace ImageDup
                     lblSize1.Visible = true;
                     lblSize2.Visible = true;
 
+                    // Afficher les noms de fichiers
+                    lblFileName1.Text = Path.GetFileName(result.Image1Path);
+                    lblFileName2.Text = Path.GetFileName(result.Image2Path);
+                    lblFileName1.Visible = true;
+                    lblFileName2.Visible = true;
+
                     // Afficher les images
                     LoadImageToPanel(pictureBox1, result.Image1Path);
                     LoadImageToPanel(pictureBox2, result.Image2Path);
@@ -455,6 +490,11 @@ namespace ImageDup
             lblSize2.Text = "";
             lblSize1.Visible = false;
             lblSize2.Visible = false;
+
+            lblFileName1.Text = "";
+            lblFileName2.Text = "";
+            lblFileName1.Visible = false;
+            lblFileName2.Visible = false;
 
             btnDeleteImage1.Enabled = false;
             btnDeleteImage2.Enabled = false;

@@ -48,9 +48,9 @@ namespace ImageDup
             pictureBox1.MouseClick += PictureBox_MouseClick;
             pictureBox2.MouseClick += PictureBox_MouseClick;
 
-            // Définir le curseur loupe pour les PictureBox
-            pictureBox1.Cursor = LoadCustomCursor(32651);
-            pictureBox2.Cursor = LoadCustomCursor(32651);
+            // Définir le curseur AppStarting pour les PictureBox (la loupe sera activée quand une image est chargée)
+            pictureBox1.Cursor = Cursors.AppStarting;
+            pictureBox2.Cursor = Cursors.AppStarting;
         }
 
         private void InitializeService()
@@ -135,8 +135,12 @@ namespace ImageDup
 
             try
             {
-                // Récupérer tous les fichiers images
+                // Réinitialiser la barre de progression et les messages
+                progressBar.Value = 0;
+                progressBar.Maximum = 100;
                 lblProgress.Text = "Recherche des images...";
+
+                // Récupérer tous les fichiers images
                 var imageFiles = GetImageFiles(selectedFolderPath);
 
                 if (imageFiles.Count == 0)
@@ -154,7 +158,46 @@ namespace ImageDup
                     return;
                 }
 
-                lblProgress.Text = $"{imageFiles.Count} images trouvées. Analyse en cours...";
+                // Pré-calculer tous les embeddings en batch (beaucoup plus rapide)
+                progressBar.Maximum = imageFiles.Count;
+                progressBar.Value = 0;
+                var precomputeStartTime = DateTime.Now;
+
+                await Task.Run(() => comparisonService.PrecomputeEmbeddings(imageFiles, batchSize: 8,
+                    (processed, total) =>
+                    {
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            progressBar.Value = processed;
+
+                            // Calculer le temps restant pour le pré-calcul
+                            var elapsed = (DateTime.Now - precomputeStartTime).TotalSeconds;
+                            if (processed > 0 && elapsed > 0)
+                            {
+                                double avgTimePerImage = elapsed / processed;
+                                int remaining = total - processed;
+                                double estimatedSecondsLeft = avgTimePerImage * remaining;
+
+                                string timeLeft = "";
+                                if (estimatedSecondsLeft < 60)
+                                    timeLeft = $"{(int)estimatedSecondsLeft} sec";
+                                else if (estimatedSecondsLeft < 3600)
+                                    timeLeft = $"{(int)(estimatedSecondsLeft / 60)} min {(int)(estimatedSecondsLeft % 60)} sec";
+                                else
+                                    timeLeft = $"{(int)(estimatedSecondsLeft / 3600)} heures {(int)((estimatedSecondsLeft % 3600) / 60)} min";
+
+                                lblProgress.Text = $"Analyse : {processed}/{total} - Restant : {timeLeft}";
+                            }
+                            else
+                            {
+                                lblProgress.Text = $"Analyse : {processed}/{total}";
+                            }
+                        });
+                    }));
+
+                // S'assurer que la barre de progression est bien réinitialisée
+                lblProgress.Text = "Analyse des images...";
+                Application.DoEvents(); // Force la mise à jour de l'UI
 
                 // Calculer le nombre total de comparaisons
                 int totalComparisons = (imageFiles.Count * (imageFiles.Count - 1)) / 2;
@@ -164,6 +207,8 @@ namespace ImageDup
                 int currentComparison = 0;
                 object lockObj = new object();
                 var startTime = DateTime.Now;
+                var recentTimes = new System.Collections.Concurrent.ConcurrentQueue<double>();
+                const int maxRecentTimes = 50; // Garder les 50 dernières mesures pour une estimation plus précise
 
                 // Comparer toutes les images 2 par 2 en parallèle pour plus de rapidité
                 await Task.Run(() =>
@@ -261,11 +306,35 @@ namespace ImageDup
                                         currentComparison++;
                                         progressBar.Value = currentComparison;
 
-                                        // Calculer le temps restant estimé
+                                        // Calculer le temps restant estimé avec moyenne mobile
                                         var elapsed = (DateTime.Now - startTime).TotalSeconds;
+
+                                        // Ajouter le temps écoulé à la file des temps récents
+                                        if (currentComparison > 1)
+                                        {
+                                            double timeForThisComparison = elapsed / currentComparison;
+                                            recentTimes.Enqueue(timeForThisComparison);
+
+                                            // Limiter la taille de la file
+                                            if (recentTimes.Count > maxRecentTimes)
+                                                recentTimes.TryDequeue(out _);
+                                        }
+
                                         if (currentComparison > 0 && elapsed > 0)
                                         {
-                                            double avgTimePerComparison = elapsed / currentComparison;
+                                            // Utiliser la moyenne des temps récents si disponible, sinon la moyenne globale
+                                            double avgTimePerComparison;
+                                            if (recentTimes.Count >= 10)
+                                            {
+                                                // Utiliser une moyenne mobile sur les dernières comparaisons
+                                                avgTimePerComparison = recentTimes.Average();
+                                            }
+                                            else
+                                            {
+                                                // Utiliser la moyenne globale au début
+                                                avgTimePerComparison = elapsed / currentComparison;
+                                            }
+
                                             int remaining = totalComparisons - currentComparison;
                                             double estimatedSecondsLeft = avgTimePerComparison * remaining;
 
@@ -277,7 +346,7 @@ namespace ImageDup
                                             else
                                                 timeLeft = $"{(int)(estimatedSecondsLeft / 3600)} heures {(int)((estimatedSecondsLeft % 3600) / 60)} min";
 
-                                            lblProgress.Text = $"Analyse {currentComparison}/{totalComparisons} - Temps restant : {timeLeft}";
+                                            lblProgress.Text = $"Analyse {currentComparison}/{totalComparisons} - Restant : {timeLeft}";
                                         }
                                         else
                                         {
@@ -289,7 +358,7 @@ namespace ImageDup
                             catch (Exception ex)
                             {
                                 // Ignorer les erreurs de comparaison individuelles
-                                System.Diagnostics.Debug.WriteLine($"Erreur lors de la comparaison : {ex.Message}");
+                                System.Diagnostics.Debug.WriteLine($"Erreur lors de l'analyse : {ex.Message}");
                             }
                         });
                 });
@@ -429,7 +498,7 @@ namespace ImageDup
 
         private Color GetSimilarityColorOpaque(float similarity)
         {
-            if (similarity >= 90) return Color.FromArgb(200, 255, 200);  // Vert clair (doublons probables)
+            if (similarity > 90) return Color.FromArgb(200, 255, 200);   // Vert clair (doublons probables)
             if (similarity >= 70) return Color.FromArgb(255, 220, 150);  // Orange clair (attention)
             return Color.FromArgb(255, 180, 180);                        // Rouge clair (images différentes)
         }
@@ -438,44 +507,58 @@ namespace ImageDup
         {
             if (dgvResults.SelectedRows.Count > 0)
             {
-                var selectedRow = dgvResults.SelectedRows[0];
-                var result = selectedRow.Tag as ComparisonResult;
+                // Mettre un sablier lors de la première sélection (initialisation lente)
+                this.Cursor = Cursors.WaitCursor;
 
-                if (result != null)
+                try
                 {
-                    // Afficher les chemins complets des images
-                    txtImagePath1.Text = result.Image1Path;
-                    txtImagePath2.Text = result.Image2Path;
-                    txtImagePath1.Visible = true;
-                    txtImagePath2.Visible = true;
+                    var selectedRow = dgvResults.SelectedRows[0];
+                    var result = selectedRow.Tag as ComparisonResult;
 
-                    // Afficher les tailles des fichiers
-                    lblSize1.Text = GetFileSize(result.Image1Path);
-                    lblSize2.Text = GetFileSize(result.Image2Path);
-                    lblSize1.Visible = true;
-                    lblSize2.Visible = true;
-
-                    // Afficher les noms de fichiers
-                    lblFileName1.Text = Path.GetFileName(result.Image1Path);
-                    lblFileName2.Text = Path.GetFileName(result.Image2Path);
-                    lblFileName1.Visible = true;
-                    lblFileName2.Visible = true;
-
-                    // Afficher les images
-                    LoadImageToPanel(pictureBox1, result.Image1Path);
-                    LoadImageToPanel(pictureBox2, result.Image2Path);
-
-                    // Activer/désactiver les boutons de suppression
-                    btnDeleteImage1.Enabled = !result.IsImage1Deleted && File.Exists(result.Image1Path);
-                    btnDeleteImage2.Enabled = !result.IsImage2Deleted && File.Exists(result.Image2Path);
-                    btnDeleteImage1.Visible = true;
-                    btnDeleteImage2.Visible = true;
-
-                    // Marquer la ligne si une image a été supprimée
-                    if (result.IsImage1Deleted || result.IsImage2Deleted)
+                    if (result != null)
                     {
-                        selectedRow.DefaultCellStyle.BackColor = Color.LightBlue;
+                        // Afficher les chemins complets des images
+                        txtImagePath1.Text = result.Image1Path;
+                        txtImagePath2.Text = result.Image2Path;
+                        txtImagePath1.Visible = true;
+                        txtImagePath2.Visible = true;
+
+                        // Afficher les tailles des fichiers
+                        lblSize1.Text = GetFileSize(result.Image1Path);
+                        lblSize2.Text = GetFileSize(result.Image2Path);
+                        lblSize1.Visible = true;
+                        lblSize2.Visible = true;
+
+                        // Afficher les noms de fichiers
+                        lblFileName1.Text = Path.GetFileName(result.Image1Path);
+                        lblFileName2.Text = Path.GetFileName(result.Image2Path);
+                        lblFileName1.Visible = true;
+                        lblFileName2.Visible = true;
+
+                        // Afficher les images
+                        LoadImageToPanel(pictureBox1, result.Image1Path);
+                        LoadImageToPanel(pictureBox2, result.Image2Path);
+
+                        // Activer le curseur loupe quand les images sont chargées
+                        pictureBox1.Cursor = LoadCustomCursor(32651);
+                        pictureBox2.Cursor = LoadCustomCursor(32651);
+
+                        // Activer/désactiver les boutons de suppression
+                        btnDeleteImage1.Enabled = !result.IsImage1Deleted && File.Exists(result.Image1Path);
+                        btnDeleteImage2.Enabled = !result.IsImage2Deleted && File.Exists(result.Image2Path);
+                        btnDeleteImage1.Visible = true;
+                        btnDeleteImage2.Visible = true;
+
+                        // Marquer la ligne si une image a été supprimée
+                        if (result.IsImage1Deleted || result.IsImage2Deleted)
+                        {
+                            selectedRow.DefaultCellStyle.BackColor = Color.LightBlue;
+                        }
                     }
+                }
+                finally
+                {
+                    this.Cursor = Cursors.Default;
                 }
             }
             else
@@ -545,6 +628,10 @@ namespace ImageDup
                 pictureBox2.Image.Dispose();
                 pictureBox2.Image = null;
             }
+
+            // Réinitialiser les curseurs à AppStarting quand aucune image n'est visible
+            pictureBox1.Cursor = Cursors.AppStarting;
+            pictureBox2.Cursor = Cursors.AppStarting;
 
             txtImagePath1.Text = "";
             txtImagePath2.Text = "";

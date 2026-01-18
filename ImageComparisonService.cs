@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -49,6 +50,75 @@ namespace ImageDup
             var embedding2 = GetImageEmbedding(imagePath2);
 
             return CosineSimilarity(embedding1, embedding2) * 100;
+        }
+
+        /// <summary>
+        /// Pré-calcule les embeddings de toutes les images en batch (plus rapide)
+        /// </summary>
+        public void PrecomputeEmbeddings(List<string> imagePaths, int batchSize = 8, Action<int, int> progressCallback = null)
+        {
+            int processedImages = 0;
+
+            // Traiter par lots
+            for (int i = 0; i < imagePaths.Count; i += batchSize)
+            {
+                int currentBatchSize = Math.Min(batchSize, imagePaths.Count - i);
+                var batch = imagePaths.Skip(i).Take(currentBatchSize).ToList();
+
+                // Filtrer les images déjà en cache
+                var uncachedBatch = batch.Where(path => !embeddingCache.ContainsKey(path)).ToList();
+                if (uncachedBatch.Count == 0)
+                {
+                    processedImages += currentBatchSize;
+                    progressCallback?.Invoke(processedImages, imagePaths.Count);
+                    continue;
+                }
+
+                // Créer un tenseur pour tout le lot [batchSize, 3, 224, 224]
+                var batchTensor = new DenseTensor<float>(new[] { uncachedBatch.Count, 3, 224, 224 });
+
+                for (int j = 0; j < uncachedBatch.Count; j++)
+                {
+                    var tensor = PreprocessImage(uncachedBatch[j]);
+                    // Copier dans le batch tensor
+                    for (int c = 0; c < 3; c++)
+                        for (int y = 0; y < 224; y++)
+                            for (int x = 0; x < 224; x++)
+                                batchTensor[j, c, y, x] = tensor[0, c, y, x];
+                }
+
+                // Placeholders texte
+                var inputIds = new DenseTensor<long>(new int[] { uncachedBatch.Count, 77 });
+                var attentionMask = new DenseTensor<long>(new int[] { uncachedBatch.Count, 77 });
+
+                var inputs = new[]
+                {
+                    NamedOnnxValue.CreateFromTensor("pixel_values", batchTensor),
+                    NamedOnnxValue.CreateFromTensor("input_ids", inputIds),
+                    NamedOnnxValue.CreateFromTensor("attention_mask", attentionMask)
+                };
+
+                // Exécuter le modèle sur tout le lot
+                using (var results = session.Run(inputs))
+                {
+                    var embeddings = results
+                        .First(x => x.Name == "image_embeds")
+                        .AsTensor<float>();
+
+                    // Extraire et cacher chaque embedding
+                    for (int j = 0; j < uncachedBatch.Count; j++)
+                    {
+                        var embedding = new float[embeddings.Dimensions[1]];
+                        for (int k = 0; k < embedding.Length; k++)
+                            embedding[k] = embeddings[j, k];
+
+                        embeddingCache.TryAdd(uncachedBatch[j], embedding);
+                    }
+                }
+
+                processedImages += currentBatchSize;
+                progressCallback?.Invoke(processedImages, imagePaths.Count);
+            }
         }
 
         /// <summary>

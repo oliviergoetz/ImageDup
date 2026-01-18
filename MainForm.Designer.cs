@@ -31,7 +31,6 @@ namespace ImageDup
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.lblTitle = new MetroFramework.Controls.MetroLabel();
             this.btnSelectFolder = new MetroFramework.Controls.MetroButton();
             this.lblSelectedFolder = new MetroFramework.Controls.MetroLabel();
@@ -319,7 +318,6 @@ namespace ImageDup
             this.Controls.Add(this.btnAnalyze);
             this.Controls.Add(this.lblSelectedFolder);
             this.Controls.Add(this.btnSelectFolder);
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
             this.Name = "MainForm";

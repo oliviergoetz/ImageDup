@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using MetroFramework.Forms;
+using Microsoft.VisualBasic.FileIO;
 
 namespace ImageDup
 {
@@ -19,8 +20,14 @@ namespace ImageDup
         public MainForm()
         {
             InitializeComponent();
-            InitializeService();
+
             comparisonResults = new List<ComparisonResult>();
+
+            dgvResults.CellFormatting += dgvResults_CellFormatting;
+
+            // Activer Ctrl+A pour sélectionner tout le texte dans les TextBox
+            txtImagePath1.KeyDown += TextBox_KeyDown;
+            txtImagePath2.KeyDown += TextBox_KeyDown;
         }
 
         private void InitializeService()
@@ -43,6 +50,7 @@ namespace ImageDup
             {
                 fbd.Description = "Sélectionner le dossier contenant les images à analyser";
                 fbd.ShowNewFolderButton = false;
+                fbd.SelectedPath = AppDomain.CurrentDomain.BaseDirectory;
 
                 if (fbd.ShowDialog() == DialogResult.OK)
                 {
@@ -60,7 +68,7 @@ namespace ImageDup
 
         private async void btnAnalyze_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(selectedFolderPath) || comparisonService == null)
+            if (string.IsNullOrEmpty(selectedFolderPath))
                 return;
 
             if (isAnalyzing)
@@ -70,13 +78,33 @@ namespace ImageDup
                 return;
             }
 
-            // Désactiver les contrôles pendant l'analyse
+            // Initialiser le service si ce n'est pas encore fait
+            if (comparisonService == null)
+            {
+                lblProgress.Text = "Initialisation du modèle...";
+                this.Cursor = Cursors.WaitCursor;
+                InitializeService();
+                this.Cursor = Cursors.Default;
+
+                if (comparisonService == null)
+                {
+                    lblProgress.Text = "";
+                    return;
+                }
+            }
+
+            // Désactiver les contrôles pendant l'analyse et afficher le sablier
             isAnalyzing = true;
+            this.Cursor = Cursors.WaitCursor;
+            dgvResults.Cursor = Cursors.WaitCursor;
             btnSelectFolder.Enabled = false;
             btnAnalyze.Enabled = false;
             dgvResults.Rows.Clear();
             comparisonResults.Clear();
             ClearPreview();
+
+            // Désactiver l'événement SelectionChanged pendant l'analyse pour éviter le clignotement
+            dgvResults.SelectionChanged -= dgvResults_SelectionChanged;
 
             try
             {
@@ -99,28 +127,62 @@ namespace ImageDup
                 progressBar.Value = 0;
 
                 int currentComparison = 0;
+                object lockObj = new object();
 
-                // Comparer toutes les images 2 par 2
+                // Comparer toutes les images 2 par 2 en parallèle pour plus de rapidité
                 await Task.Run(() =>
                 {
+                    var comparisons = new List<(int i, int j)>();
                     for (int i = 0; i < imageFiles.Count - 1; i++)
                     {
                         for (int j = i + 1; j < imageFiles.Count; j++)
                         {
+                            comparisons.Add((i, j));
+                        }
+                    }
+
+                    Parallel.ForEach(comparisons, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        pair =>
+                        {
                             try
                             {
                                 float similarity = comparisonService.CompareImages(
-                                    imageFiles[i], imageFiles[j]);
+                                    imageFiles[pair.i], imageFiles[pair.j]);
 
-                                var result = new ComparisonResult(imageFiles[i], imageFiles[j], similarity);
+                                var result = new ComparisonResult(imageFiles[pair.i], imageFiles[pair.j], similarity);
 
                                 // Mettre à jour l'UI dans le thread principal
                                 this.Invoke((MethodInvoker)delegate
                                 {
-                                    comparisonResults.Add(result);
-                                    currentComparison++;
-                                    progressBar.Value = currentComparison;
-                                    lblProgress.Text = $"Comparaison {currentComparison}/{totalComparisons}...";
+                                    // Trouver la position d'insertion pour garder le tri par similarité décroissante
+                                    int insertIndex = 0;
+                                    for (int k = 0; k < comparisonResults.Count; k++)
+                                    {
+                                        if (result.SimilarityPercentage > comparisonResults[k].SimilarityPercentage)
+                                        {
+                                            insertIndex = k;
+                                            break;
+                                        }
+                                        insertIndex = k + 1;
+                                    }
+
+                                    comparisonResults.Insert(insertIndex, result);
+
+                                    // Insérer la ligne à la bonne position dans le DataGridView
+                                    dgvResults.Rows.Insert(insertIndex,
+                                        result.Image1Name,
+                                        result.Image2Name,
+                                        $"{result.SimilarityPercentage:F2} %"
+                                    );
+                                    dgvResults.Rows[insertIndex].Tag = result;
+                                    dgvResults.ClearSelection();
+
+                                    lock (lockObj)
+                                    {
+                                        currentComparison++;
+                                        progressBar.Value = currentComparison;
+                                        lblProgress.Text = $"Comparaison {currentComparison}/{totalComparisons}...";
+                                    }
                                 });
                             }
                             catch (Exception ex)
@@ -128,18 +190,12 @@ namespace ImageDup
                                 // Ignorer les erreurs de comparaison individuelles
                                 System.Diagnostics.Debug.WriteLine($"Erreur lors de la comparaison : {ex.Message}");
                             }
-                        }
-                    }
+                        });
                 });
-
-                // Trier les résultats par similarité décroissante
-                comparisonResults = comparisonResults.OrderByDescending(r => r.SimilarityPercentage).ToList();
-
-                // Afficher les résultats dans le DataGridView
-                DisplayResults();
 
                 lblProgress.Text = $"Analyse terminée ! {comparisonResults.Count} comparaisons effectuées.";
                 progressBar.Value = progressBar.Maximum;
+                dgvResults.ClearSelection();
             }
             catch (Exception ex)
             {
@@ -150,7 +206,12 @@ namespace ImageDup
             }
             finally
             {
-                // Réactiver les contrôles
+                // Réactiver l'événement SelectionChanged
+                dgvResults.SelectionChanged += dgvResults_SelectionChanged;
+
+                // Réactiver les contrôles et restaurer le curseur normal
+                this.Cursor = Cursors.Default;
+                dgvResults.Cursor = Cursors.Default;
                 isAnalyzing = false;
                 btnSelectFolder.Enabled = true;
                 btnAnalyze.Enabled = true;
@@ -165,7 +226,7 @@ namespace ImageDup
             try
             {
                 // Parcourir récursivement tous les sous-dossiers
-                var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+                var allFiles = Directory.GetFiles(folderPath, "*.*", System.IO.SearchOption.AllDirectories);
 
                 foreach (var file in allFiles)
                 {
@@ -186,6 +247,7 @@ namespace ImageDup
 
         private void DisplayResults()
         {
+            dgvResults.SuspendLayout();
             dgvResults.Rows.Clear();
 
             foreach (var result in comparisonResults)
@@ -198,10 +260,47 @@ namespace ImageDup
 
                 // Stocker l'objet ComparisonResult dans la propriété Tag de la ligne
                 dgvResults.Rows[rowIndex].Tag = result;
+            }
 
-                // Colorer la ligne en fonction de la similarité
-                Color rowColor = GetSimilarityColor(result.SimilarityPercentage);
-                dgvResults.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(30, rowColor);
+            dgvResults.ResumeLayout();
+
+            // Désélectionner toutes les lignes
+            dgvResults.ClearSelection();
+        }
+
+        private void dgvResults_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.RowIndex < dgvResults.Rows.Count)
+            {
+                var row = dgvResults.Rows[e.RowIndex];
+                var result = row.Tag as ComparisonResult;
+
+                if (result != null)
+                {
+                    // Si une image a été supprimée, utiliser une couleur différente
+                    if (result.IsImage1Deleted || result.IsImage2Deleted)
+                    {
+                        e.CellStyle.BackColor = Color.LightBlue;
+                        e.CellStyle.SelectionBackColor = Color.LightSkyBlue;
+                    }
+                    else
+                    {
+                        // Colorer la ligne en fonction de la similarité (couleurs opaques pour éviter les problèmes de rendu)
+                        Color rowColor = GetSimilarityColorOpaque(result.SimilarityPercentage);
+                        e.CellStyle.BackColor = rowColor;
+
+                        // Assombrir légèrement pour la sélection
+                        Color selectionColor = Color.FromArgb(
+                            Math.Max(0, rowColor.R - 40),
+                            Math.Max(0, rowColor.G - 40),
+                            Math.Max(0, rowColor.B - 40)
+                        );
+                        e.CellStyle.SelectionBackColor = selectionColor;
+                    }
+
+                    e.CellStyle.ForeColor = Color.Black;
+                    e.CellStyle.SelectionForeColor = Color.Black;
+                }
             }
         }
 
@@ -213,6 +312,13 @@ namespace ImageDup
             return Color.FromArgb(149, 165, 166);                        // Gris
         }
 
+        private Color GetSimilarityColorOpaque(float similarity)
+        {
+            if (similarity >= 90) return Color.FromArgb(200, 255, 200);  // Vert clair (doublons probables)
+            if (similarity >= 70) return Color.FromArgb(255, 220, 150);  // Orange clair (attention)
+            return Color.FromArgb(255, 180, 180);                        // Rouge clair (images différentes)
+        }
+
         private void dgvResults_SelectionChanged(object sender, EventArgs e)
         {
             if (dgvResults.SelectedRows.Count > 0)
@@ -222,6 +328,12 @@ namespace ImageDup
 
                 if (result != null)
                 {
+                    // Afficher les chemins complets des images
+                    txtImagePath1.Text = result.Image1Path;
+                    txtImagePath2.Text = result.Image2Path;
+                    txtImagePath1.Visible = true;
+                    txtImagePath2.Visible = true;
+
                     // Afficher les images
                     LoadImageToPanel(pictureBox1, result.Image1Path);
                     LoadImageToPanel(pictureBox2, result.Image2Path);
@@ -229,6 +341,8 @@ namespace ImageDup
                     // Activer/désactiver les boutons de suppression
                     btnDeleteImage1.Enabled = !result.IsImage1Deleted && File.Exists(result.Image1Path);
                     btnDeleteImage2.Enabled = !result.IsImage2Deleted && File.Exists(result.Image2Path);
+                    btnDeleteImage1.Visible = true;
+                    btnDeleteImage2.Visible = true;
 
                     // Marquer la ligne si une image a été supprimée
                     if (result.IsImage1Deleted || result.IsImage2Deleted)
@@ -259,7 +373,28 @@ namespace ImageDup
                 {
                     using (var img = Image.FromFile(imagePath))
                     {
-                        pictureBox.Image = new Bitmap(img);
+                        // Créer une copie de l'image
+                        var bitmap = new Bitmap(img);
+
+                        // Corriger l'orientation selon les métadonnées EXIF
+                        if (Array.IndexOf(img.PropertyIdList, 0x0112) > -1)
+                        {
+                            var orientation = (int)img.GetPropertyItem(0x0112).Value[0];
+                            switch (orientation)
+                            {
+                                case 3: // Rotation 180°
+                                    bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                                    break;
+                                case 6: // Rotation 90° horaire
+                                    bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                                    break;
+                                case 8: // Rotation 90° anti-horaire
+                                    bitmap.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                                    break;
+                            }
+                        }
+
+                        pictureBox.Image = bitmap;
                     }
                 }
             }
@@ -284,8 +419,15 @@ namespace ImageDup
                 pictureBox2.Image = null;
             }
 
+            txtImagePath1.Text = "";
+            txtImagePath2.Text = "";
+            txtImagePath1.Visible = false;
+            txtImagePath2.Visible = false;
+
             btnDeleteImage1.Enabled = false;
             btnDeleteImage2.Enabled = false;
+            btnDeleteImage1.Visible = false;
+            btnDeleteImage2.Visible = false;
         }
 
         private void btnDeleteImage1_Click(object sender, EventArgs e)
@@ -322,10 +464,10 @@ namespace ImageDup
             string imageName = Path.GetFileName(imagePath);
 
             var confirmResult = MessageBox.Show(
-                $"Êtes-vous sûr de vouloir supprimer définitivement le fichier ?\n\n{imageName}",
+                $"Êtes-vous sûr de vouloir supprimer le fichier ?\n\n{imageName}",
                 "Confirmation de suppression",
                 MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
+                MessageBoxIcon.Question);
 
             if (confirmResult == DialogResult.Yes)
             {
@@ -349,8 +491,8 @@ namespace ImageDup
                         }
                     }
 
-                    // Supprimer le fichier
-                    File.Delete(imagePath);
+                    // Envoyer le fichier à la corbeille
+                    FileSystem.DeleteFile(imagePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
 
                     // Marquer comme supprimé
                     if (isImage1)
@@ -364,11 +506,8 @@ namespace ImageDup
                         btnDeleteImage2.Enabled = false;
                     }
 
-                    // Marquer la ligne en bleu
-                    row.DefaultCellStyle.BackColor = Color.LightBlue;
-
-                    MessageBox.Show("Fichier supprimé avec succès.",
-                        "Suppression", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Forcer le rafraîchissement de la ligne
+                    dgvResults.InvalidateRow(row.Index);
                 }
                 catch (Exception ex)
                 {
@@ -383,6 +522,16 @@ namespace ImageDup
             // Libérer les ressources des images
             ClearPreview();
             base.OnFormClosing(e);
+        }
+
+        private void TextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.A)
+            {
+                ((TextBox)sender).SelectAll();
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+            }
         }
     }
 }

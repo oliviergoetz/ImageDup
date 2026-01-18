@@ -3,12 +3,12 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("ImageDup")]
-[assembly: AssemblyDescription("Application de détection de doublons d'images avec ONNX CLIP")]
+[assembly: AssemblyDescription("Détection de doublons d'images")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Olivier GOETZ")]
 [assembly: AssemblyProduct("ImageDup")]
 [assembly: AssemblyCopyright("Copyright © 2026")]
-[assembly: AssemblyTrademark("")]
+[assembly: AssemblyTrademark("olivier.goetz@free.fr")]
 [assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]

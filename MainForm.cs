@@ -84,6 +84,11 @@ namespace ImageDup
                     comparisonResults.Clear();
                     dgvResults.Rows.Clear();
                     ClearPreview();
+
+                    // Réinitialiser la barre de progression et les messages
+                    progressBar.Value = 0;
+                    progressBar.Maximum = 100;
+                    lblProgress.Text = "";
                 }
             }
         }
@@ -135,6 +140,7 @@ namespace ImageDup
                 {
                     MessageBox.Show("Aucune image n'a été trouvée dans le dossier sélectionné.",
                         "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    lblProgress.Text = "";
                     return;
                 }
 
@@ -154,6 +160,7 @@ namespace ImageDup
 
                 int currentComparison = 0;
                 object lockObj = new object();
+                var startTime = DateTime.Now;
 
                 // Comparer toutes les images 2 par 2 en parallèle pour plus de rapidité
                 await Task.Run(() =>
@@ -243,7 +250,29 @@ namespace ImageDup
                                     {
                                         currentComparison++;
                                         progressBar.Value = currentComparison;
-                                        lblProgress.Text = $"Comparaison {currentComparison}/{totalComparisons}...";
+
+                                        // Calculer le temps restant estimé
+                                        var elapsed = (DateTime.Now - startTime).TotalSeconds;
+                                        if (currentComparison > 0 && elapsed > 0)
+                                        {
+                                            double avgTimePerComparison = elapsed / currentComparison;
+                                            int remaining = totalComparisons - currentComparison;
+                                            double estimatedSecondsLeft = avgTimePerComparison * remaining;
+
+                                            string timeLeft = "";
+                                            if (estimatedSecondsLeft < 60)
+                                                timeLeft = $"{(int)estimatedSecondsLeft} sec";
+                                            else if (estimatedSecondsLeft < 3600)
+                                                timeLeft = $"{(int)(estimatedSecondsLeft / 60)} min {(int)(estimatedSecondsLeft % 60)} sec";
+                                            else
+                                                timeLeft = $"{(int)(estimatedSecondsLeft / 3600)} heures {(int)((estimatedSecondsLeft % 3600) / 60)} min";
+
+                                            lblProgress.Text = $"Analyse {currentComparison}/{totalComparisons} - Temps restant : {timeLeft}";
+                                        }
+                                        else
+                                        {
+                                            lblProgress.Text = $"Analyse {currentComparison}/{totalComparisons}...";
+                                        }
                                     }
                                 });
                             }
@@ -255,7 +284,7 @@ namespace ImageDup
                         });
                 });
 
-                lblProgress.Text = $"Analyse terminée ! {comparisonResults.Count} comparaisons effectuées.";
+                lblProgress.Text = $"Analyse terminée ! {comparisonResults.Count} résultats trouvés.";
                 progressBar.Value = progressBar.Maximum;
             }
             catch (Exception ex)
@@ -690,22 +719,26 @@ namespace ImageDup
             PictureBox pb = sender as PictureBox;
             if (pb?.Image == null) return;
 
-            // Créer une fenêtre de zoom
-            Form zoomForm = new Form
+            // Créer une fenêtre de zoom avec style Metro
+            var zoomForm = new MetroFramework.Forms.MetroForm
             {
-                Text = "Zoom - Cliquez ou Echap pour fermer",
+                Text = "",
                 Size = new Size(800, 600),
                 StartPosition = FormStartPosition.CenterParent,
-                BackColor = Color.Black,
-                FormBorderStyle = FormBorderStyle.SizableToolWindow,
-                KeyPreview = true
+                KeyPreview = true,
+                Resizable = true,
+                MaximizeBox = true,
+                MinimizeBox = false,
+                DisplayHeader = false,
+                ShowInTaskbar = false
             };
 
             PictureBox zoomPictureBox = new PictureBox
             {
                 Dock = DockStyle.Fill,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Image = (Image)pb.Image.Clone()
+                Image = (Image)pb.Image.Clone(),
+                BackColor = Color.Black
             };
 
             // Fermer avec un clic

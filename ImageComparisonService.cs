@@ -13,9 +13,11 @@ namespace ImageDup
     /// <summary>
     /// Service pour comparer deux images en utilisant le modèle ONNX CLIP
     /// </summary>
-    public class ImageComparisonService
+    public class ImageComparisonService : IDisposable
     {
         private readonly string modelPath;
+        private readonly InferenceSession session;
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, float[]> embeddingCache;
 
         public ImageComparisonService(string modelPath)
         {
@@ -23,6 +25,13 @@ namespace ImageDup
                 throw new FileNotFoundException("Le fichier du modèle ONNX est introuvable.", modelPath);
 
             this.modelPath = modelPath;
+            this.session = new InferenceSession(modelPath);
+            this.embeddingCache = new System.Collections.Concurrent.ConcurrentDictionary<string, float[]>();
+        }
+
+        public void Dispose()
+        {
+            session?.Dispose();
         }
 
         /// <summary>
@@ -36,51 +45,41 @@ namespace ImageDup
             if (!File.Exists(imagePath2))
                 throw new FileNotFoundException("L'image 2 est introuvable.", imagePath2);
 
-            using (var session = new InferenceSession(modelPath))
+            var embedding1 = GetImageEmbedding(imagePath1);
+            var embedding2 = GetImageEmbedding(imagePath2);
+
+            return CosineSimilarity(embedding1, embedding2) * 100;
+        }
+
+        /// <summary>
+        /// Obtient l'embedding d'une image (avec cache)
+        /// </summary>
+        private float[] GetImageEmbedding(string imagePath)
+        {
+            return embeddingCache.GetOrAdd(imagePath, path =>
             {
-                var tensor1 = PreprocessImage(imagePath1);
-                var tensor2 = PreprocessImage(imagePath2);
+                var tensor = PreprocessImage(path);
 
                 // Placeholders texte (seq_len = 77 pour CLIP)
                 var inputIds = new DenseTensor<long>(new int[] { 1, 77 });
                 var attentionMask = new DenseTensor<long>(new int[] { 1, 77 });
 
-                var inputs1 = new[]
+                var inputs = new[]
                 {
-                    NamedOnnxValue.CreateFromTensor("pixel_values", tensor1),
+                    NamedOnnxValue.CreateFromTensor("pixel_values", tensor),
                     NamedOnnxValue.CreateFromTensor("input_ids", inputIds),
                     NamedOnnxValue.CreateFromTensor("attention_mask", attentionMask)
                 };
-
-                var inputs2 = new[]
-                {
-                    NamedOnnxValue.CreateFromTensor("pixel_values", tensor2),
-                    NamedOnnxValue.CreateFromTensor("input_ids", inputIds),
-                    NamedOnnxValue.CreateFromTensor("attention_mask", attentionMask)
-                };
-
-                float[] embedding1;
-                float[] embedding2;
 
                 // Demande au modèle de donner son vecteur de représentation (embedding) de l'image
-                using (var results1 = session.Run(inputs1))
+                using (var results = session.Run(inputs))
                 {
-                    embedding1 = results1
+                    return results
                         .First(x => x.Name == "image_embeds")
                         .AsTensor<float>()
                         .ToArray();
                 }
-
-                using (var results2 = session.Run(inputs2))
-                {
-                    embedding2 = results2
-                        .First(x => x.Name == "image_embeds")
-                        .AsTensor<float>()
-                        .ToArray();
-                }
-
-                return CosineSimilarity(embedding1, embedding2) * 100;
-            }
+            });
         }
 
         /// <summary>
@@ -107,18 +106,40 @@ namespace ImageDup
                     float[] mean = { 0.48145466f, 0.4578275f, 0.40821073f };
                     float[] std = { 0.26862954f, 0.26130258f, 0.27577711f };
 
-                    // Remplir le tenseur avec les pixels normalisés
-                    for (int y = 0; y < 224; y++)
-                    {
-                        for (int x = 0; x < 224; x++)
-                        {
-                            Color pixel = resizedImage.GetPixel(x, y);
+                    // Remplir le tenseur avec les pixels normalisés en utilisant LockBits (beaucoup plus rapide)
+                    BitmapData bmpData = resizedImage.LockBits(
+                        new Rectangle(0, 0, 224, 224),
+                        ImageLockMode.ReadOnly,
+                        PixelFormat.Format24bppRgb);
 
-                            // Normaliser chaque canal : (valeur/255 - moyenne) / écart-type
-                            tensor[0, 0, y, x] = (pixel.R / 255f - mean[0]) / std[0]; // Rouge
-                            tensor[0, 1, y, x] = (pixel.G / 255f - mean[1]) / std[1]; // Vert
-                            tensor[0, 2, y, x] = (pixel.B / 255f - mean[2]) / std[2]; // Bleu
+                    try
+                    {
+                        unsafe
+                        {
+                            byte* ptr = (byte*)bmpData.Scan0;
+                            int stride = bmpData.Stride;
+
+                            for (int y = 0; y < 224; y++)
+                            {
+                                byte* row = ptr + (y * stride);
+                                for (int x = 0; x < 224; x++)
+                                {
+                                    int offset = x * 3;
+                                    byte b = row[offset];
+                                    byte g = row[offset + 1];
+                                    byte r = row[offset + 2];
+
+                                    // Normaliser chaque canal : (valeur/255 - moyenne) / écart-type
+                                    tensor[0, 0, y, x] = (r / 255f - mean[0]) / std[0]; // Rouge
+                                    tensor[0, 1, y, x] = (g / 255f - mean[1]) / std[1]; // Vert
+                                    tensor[0, 2, y, x] = (b / 255f - mean[2]) / std[2]; // Bleu
+                                }
+                            }
                         }
+                    }
+                    finally
+                    {
+                        resizedImage.UnlockBits(bmpData);
                     }
 
                     return tensor;

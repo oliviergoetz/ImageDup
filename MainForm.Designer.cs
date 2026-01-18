@@ -35,6 +35,7 @@ namespace ImageDup
             this.btnSelectFolder = new MetroFramework.Controls.MetroButton();
             this.lblSelectedFolder = new MetroFramework.Controls.MetroLabel();
             this.btnAnalyze = new MetroFramework.Controls.MetroButton();
+            this.btnCancelAnalysis = new MetroFramework.Controls.MetroButton();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblProgress = new MetroFramework.Controls.MetroLabel();
             this.dgvResults = new MetroFramework.Controls.MetroGrid();
@@ -109,21 +110,35 @@ namespace ImageDup
             this.btnAnalyze.UseSelectable = true;
             this.btnAnalyze.Click += new System.EventHandler(this.btnAnalyze_Click);
             // 
+            // btnCancelAnalysis
+            // 
+            this.btnCancelAnalysis.Enabled = false;
+            this.btnCancelAnalysis.FontSize = MetroFramework.MetroButtonSize.Medium;
+            this.btnCancelAnalysis.FontWeight = MetroFramework.MetroButtonWeight.Regular;
+            this.btnCancelAnalysis.Location = new System.Drawing.Point(688, 148);
+            this.btnCancelAnalysis.Margin = new System.Windows.Forms.Padding(4);
+            this.btnCancelAnalysis.Name = "btnCancelAnalysis";
+            this.btnCancelAnalysis.Size = new System.Drawing.Size(86, 31);
+            this.btnCancelAnalysis.TabIndex = 4;
+            this.btnCancelAnalysis.Text = "Annuler";
+            this.btnCancelAnalysis.UseSelectable = true;
+            this.btnCancelAnalysis.Click += new System.EventHandler(this.btnCancelAnalysis_Click);
+            // 
             // progressBar
             // 
             this.progressBar.Location = new System.Drawing.Point(302, 148);
             this.progressBar.Margin = new System.Windows.Forms.Padding(4);
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(472, 31);
-            this.progressBar.TabIndex = 4;
+            this.progressBar.Size = new System.Drawing.Size(379, 31);
+            this.progressBar.TabIndex = 5;
             // 
             // lblProgress
             // 
-            this.lblProgress.Location = new System.Drawing.Point(320, 178);
+            this.lblProgress.Location = new System.Drawing.Point(321, 183);
             this.lblProgress.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.lblProgress.Name = "lblProgress";
-            this.lblProgress.Size = new System.Drawing.Size(453, 25);
-            this.lblProgress.TabIndex = 5;
+            this.lblProgress.Size = new System.Drawing.Size(344, 25);
+            this.lblProgress.TabIndex = 6;
             this.lblProgress.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // dgvResults
@@ -365,6 +380,7 @@ namespace ImageDup
             this.Controls.Add(this.dgvResults);
             this.Controls.Add(this.lblProgress);
             this.Controls.Add(this.progressBar);
+            this.Controls.Add(this.btnCancelAnalysis);
             this.Controls.Add(this.btnAnalyze);
             this.Controls.Add(this.lblSelectedFolder);
             this.Controls.Add(this.btnSelectFolder);
@@ -389,6 +405,7 @@ namespace ImageDup
         private MetroFramework.Controls.MetroButton btnSelectFolder;
         private MetroFramework.Controls.MetroLabel lblSelectedFolder;
         private MetroFramework.Controls.MetroButton btnAnalyze;
+        private MetroFramework.Controls.MetroButton btnCancelAnalysis;
         private System.Windows.Forms.ProgressBar progressBar;
         private MetroFramework.Controls.MetroLabel lblProgress;
         private MetroFramework.Controls.MetroGrid dgvResults;

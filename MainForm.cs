@@ -16,6 +16,7 @@ namespace ImageDup
         private ImageComparisonService comparisonService;
         private List<ComparisonResult> comparisonResults;
         private bool isAnalyzing = false;
+        private System.Threading.CancellationTokenSource cancellationTokenSource;
 
         public MainForm()
         {
@@ -122,10 +123,12 @@ namespace ImageDup
 
             // Désactiver certains contrôles pendant l'analyse
             isAnalyzing = true;
+            cancellationTokenSource = new System.Threading.CancellationTokenSource();
             this.Cursor = Cursors.AppStarting; // Flèche avec sablier
             dgvResults.Cursor = Cursors.AppStarting;
             btnSelectFolder.Enabled = false;
             btnAnalyze.Enabled = false;
+            btnCancelAnalysis.Enabled = true;
             dgvResults.Rows.Clear();
             comparisonResults.Clear();
             ClearPreview();
@@ -174,9 +177,16 @@ namespace ImageDup
                         }
                     }
 
-                    Parallel.ForEach(comparisons, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                    Parallel.ForEach(comparisons, new ParallelOptions
+                        {
+                            MaxDegreeOfParallelism = Environment.ProcessorCount,
+                            CancellationToken = cancellationTokenSource.Token
+                        },
                         pair =>
                         {
+                            if (cancellationTokenSource.Token.IsCancellationRequested)
+                                return;
+
                             try
                             {
                                 float similarity = comparisonService.CompareImages(
@@ -284,8 +294,13 @@ namespace ImageDup
                         });
                 });
 
-                lblProgress.Text = $"Analyse terminée ! {comparisonResults.Count} résultats trouvés.";
+                lblProgress.Text = $"Analyse terminée : {comparisonResults.Count} résultats";
                 progressBar.Value = progressBar.Maximum;
+            }
+            catch (OperationCanceledException)
+            {
+                lblProgress.Text = "Analyse annulée";
+                progressBar.Value = 0;
             }
             catch (Exception ex)
             {
@@ -302,6 +317,19 @@ namespace ImageDup
                 isAnalyzing = false;
                 btnSelectFolder.Enabled = true;
                 btnAnalyze.Enabled = true;
+                btnCancelAnalysis.Enabled = false;
+                cancellationTokenSource?.Dispose();
+                cancellationTokenSource = null;
+            }
+        }
+
+        private void btnCancelAnalysis_Click(object sender, EventArgs e)
+        {
+            if (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
+            {
+                cancellationTokenSource.Cancel();
+                btnCancelAnalysis.Enabled = false;
+                lblProgress.Text = "Annulation en cours...";
             }
         }
 

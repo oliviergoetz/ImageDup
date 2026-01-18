@@ -21,6 +21,20 @@ namespace ImageDup
         {
             InitializeComponent();
 
+            // Charger l'icône depuis les ressources embarquées
+            try
+            {
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                using (var stream = assembly.GetManifestResourceStream("ImageDup.ImageDup.ico"))
+                {
+                    if (stream != null)
+                    {
+                        this.Icon = new System.Drawing.Icon(stream);
+                    }
+                }
+            }
+            catch { }
+
             comparisonResults = new List<ComparisonResult>();
 
             dgvResults.CellFormatting += dgvResults_CellFormatting;
@@ -112,9 +126,16 @@ namespace ImageDup
                 lblProgress.Text = "Recherche des images...";
                 var imageFiles = GetImageFiles(selectedFolderPath);
 
+                if (imageFiles.Count == 0)
+                {
+                    MessageBox.Show("Aucune image n'a été trouvée dans le dossier sélectionné.",
+                        "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 if (imageFiles.Count < 2)
                 {
-                    MessageBox.Show("Au moins 2 images sont nécessaires pour effectuer une comparaison.",
+                    MessageBox.Show("Au moins 2 images sont nécessaires pour effectuer une analyse.",
                         "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
@@ -334,6 +355,12 @@ namespace ImageDup
                     txtImagePath1.Visible = true;
                     txtImagePath2.Visible = true;
 
+                    // Afficher les tailles des fichiers
+                    lblSize1.Text = GetFileSize(result.Image1Path);
+                    lblSize2.Text = GetFileSize(result.Image2Path);
+                    lblSize1.Visible = true;
+                    lblSize2.Visible = true;
+
                     // Afficher les images
                     LoadImageToPanel(pictureBox1, result.Image1Path);
                     LoadImageToPanel(pictureBox2, result.Image2Path);
@@ -423,6 +450,11 @@ namespace ImageDup
             txtImagePath2.Text = "";
             txtImagePath1.Visible = false;
             txtImagePath2.Visible = false;
+
+            lblSize1.Text = "";
+            lblSize2.Text = "";
+            lblSize1.Visible = false;
+            lblSize2.Visible = false;
 
             btnDeleteImage1.Enabled = false;
             btnDeleteImage2.Enabled = false;
@@ -515,6 +547,28 @@ namespace ImageDup
                         "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private string GetFileSize(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    FileInfo fileInfo = new FileInfo(filePath);
+                    long sizeInBytes = fileInfo.Length;
+
+                    if (sizeInBytes < 1024)
+                        return $"{sizeInBytes} o";
+                    else if (sizeInBytes < 1024 * 1024)
+                        return $"{sizeInBytes / 1024.0:F1} Ko";
+                    else
+                        return $"{sizeInBytes / (1024.0 * 1024.0):F1} Mo";
+                }
+            }
+            catch { }
+
+            return "";
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

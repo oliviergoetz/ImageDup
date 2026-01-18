@@ -42,6 +42,14 @@ namespace ImageDup
             // Activer Ctrl+A pour sélectionner tout le texte dans les TextBox
             txtImagePath1.KeyDown += TextBox_KeyDown;
             txtImagePath2.KeyDown += TextBox_KeyDown;
+
+            // Activer la loupe sur les images
+            pictureBox1.MouseClick += PictureBox_MouseClick;
+            pictureBox2.MouseClick += PictureBox_MouseClick;
+
+            // Définir le curseur loupe pour les PictureBox
+            pictureBox1.Cursor = LoadCustomCursor(32651);
+            pictureBox2.Cursor = LoadCustomCursor(32651);
         }
 
         private void InitializeService()
@@ -626,6 +634,95 @@ namespace ImageDup
                 e.Handled = true;
                 e.SuppressKeyPress = true;
             }
+        }
+
+        private Cursor LoadCustomCursor(int cursorId)
+        {
+            try
+            {
+                // Créer un curseur loupe personnalisé avec contour blanc
+                Bitmap bmp = new Bitmap(32, 32);
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.Clear(Color.Transparent);
+
+                    // Dessiner un contour blanc épais pour le contraste
+                    using (Pen penWhite = new Pen(Color.White, 4))
+                    {
+                        // Cercle de la loupe blanc
+                        g.DrawEllipse(penWhite, 4, 4, 16, 16);
+                        // Manche de la loupe blanc
+                        g.DrawLine(penWhite, 17, 17, 26, 26);
+                    }
+
+                    // Dessiner la loupe noire par dessus
+                    using (Pen penBlack = new Pen(Color.Black, 2))
+                    {
+                        // Cercle de la loupe
+                        g.DrawEllipse(penBlack, 4, 4, 16, 16);
+                        // Manche de la loupe
+                        g.DrawLine(penBlack, 17, 17, 26, 26);
+                    }
+
+                    // Signe + au centre pour indiquer le zoom
+                    using (Pen penPlus = new Pen(Color.DodgerBlue, 2))
+                    {
+                        g.DrawLine(penPlus, 12, 9, 12, 15); // Ligne verticale
+                        g.DrawLine(penPlus, 9, 12, 15, 12); // Ligne horizontale
+                    }
+                }
+
+                // Convertir en curseur avec le hotspot au centre du cercle
+                IntPtr hIcon = bmp.GetHicon();
+                Cursor cursor = new Cursor(hIcon);
+                return cursor;
+            }
+            catch { }
+            return Cursors.Hand; // Fallback si le curseur personnalisé échoue
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
+
+        private void PictureBox_MouseClick(object sender, MouseEventArgs e)
+        {
+            PictureBox pb = sender as PictureBox;
+            if (pb?.Image == null) return;
+
+            // Créer une fenêtre de zoom
+            Form zoomForm = new Form
+            {
+                Text = "Zoom - Cliquez ou Echap pour fermer",
+                Size = new Size(800, 600),
+                StartPosition = FormStartPosition.CenterParent,
+                BackColor = Color.Black,
+                FormBorderStyle = FormBorderStyle.SizableToolWindow,
+                KeyPreview = true
+            };
+
+            PictureBox zoomPictureBox = new PictureBox
+            {
+                Dock = DockStyle.Fill,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Image = (Image)pb.Image.Clone()
+            };
+
+            // Fermer avec un clic
+            zoomPictureBox.MouseClick += (s, ev) => zoomForm.Close();
+
+            // Fermer avec la touche Escape
+            zoomForm.KeyDown += (s, ev) =>
+            {
+                if (ev.KeyCode == Keys.Escape)
+                {
+                    zoomForm.Close();
+                }
+            };
+
+            zoomForm.Controls.Add(zoomPictureBox);
+            zoomForm.ShowDialog(this);
+            zoomPictureBox.Image?.Dispose();
         }
     }
 }

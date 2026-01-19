@@ -90,6 +90,7 @@ namespace ImageDup
                     progressBar.Value = 0;
                     progressBar.Maximum = 100;
                     lblProgress.Text = "";
+                    lblImageCount.Text = "";
                 }
             }
         }
@@ -157,6 +158,10 @@ namespace ImageDup
                         "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
+
+                // Afficher le nombre d'images dans le nouveau label
+                lblImageCount.Text = $"{imageFiles.Count} images";
+                Application.DoEvents(); // Force la mise à jour de l'UI
 
                 // Pré-calculer tous les embeddings en batch (beaucoup plus rapide)
                 progressBar.Maximum = imageFiles.Count;

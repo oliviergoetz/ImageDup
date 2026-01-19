@@ -35,6 +35,7 @@ namespace ImageDup
             this.btnSelectFolder = new MetroFramework.Controls.MetroButton();
             this.lblSelectedFolder = new MetroFramework.Controls.MetroLabel();
             this.btnAnalyze = new MetroFramework.Controls.MetroButton();
+            this.lblImageCount = new MetroFramework.Controls.MetroLabel();
             this.btnCancelAnalysis = new MetroFramework.Controls.MetroButton();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblProgress = new MetroFramework.Controls.MetroLabel();
@@ -109,9 +110,18 @@ namespace ImageDup
             this.btnAnalyze.Text = "Analyser";
             this.btnAnalyze.UseSelectable = true;
             this.btnAnalyze.Click += new System.EventHandler(this.btnAnalyze_Click);
-            // 
+            //
+            // lblImageCount
+            //
+            this.lblImageCount.Location = new System.Drawing.Point(27, 183);
+            this.lblImageCount.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.lblImageCount.Name = "lblImageCount";
+            this.lblImageCount.Size = new System.Drawing.Size(267, 23);
+            this.lblImageCount.TabIndex = 99;
+            this.lblImageCount.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            //
             // btnCancelAnalysis
-            // 
+            //
             this.btnCancelAnalysis.Enabled = false;
             this.btnCancelAnalysis.FontSize = MetroFramework.MetroButtonSize.Medium;
             this.btnCancelAnalysis.FontWeight = MetroFramework.MetroButtonWeight.Regular;
@@ -381,6 +391,7 @@ namespace ImageDup
             this.Controls.Add(this.lblProgress);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.btnCancelAnalysis);
+            this.Controls.Add(this.lblImageCount);
             this.Controls.Add(this.btnAnalyze);
             this.Controls.Add(this.lblSelectedFolder);
             this.Controls.Add(this.btnSelectFolder);
@@ -405,6 +416,7 @@ namespace ImageDup
         private MetroFramework.Controls.MetroButton btnSelectFolder;
         private MetroFramework.Controls.MetroLabel lblSelectedFolder;
         private MetroFramework.Controls.MetroButton btnAnalyze;
+        private MetroFramework.Controls.MetroLabel lblImageCount;
         private MetroFramework.Controls.MetroButton btnCancelAnalysis;
         private System.Windows.Forms.ProgressBar progressBar;
         private MetroFramework.Controls.MetroLabel lblProgress;

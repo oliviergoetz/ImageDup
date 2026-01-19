@@ -461,23 +461,27 @@ namespace ImageDup
 
                 if (result != null)
                 {
-                    // Si une image a été supprimée, utiliser une couleur différente
-                    if (result.IsImage1Deleted || result.IsImage2Deleted)
+                    // Déterminer quelle cellule est concernée
+                    bool isImage1Cell = (e.ColumnIndex == 0); // Colonne "Image 1"
+                    bool isImage2Cell = (e.ColumnIndex == 1); // Colonne "Image 2"
+
+                    // Si c'est la cellule d'une image supprimée, la mettre en gris clair
+                    if ((isImage1Cell && result.IsImage1Deleted) || (isImage2Cell && result.IsImage2Deleted))
                     {
-                        e.CellStyle.BackColor = Color.LightBlue;
-                        e.CellStyle.SelectionBackColor = Color.LightSkyBlue;
+                        e.CellStyle.BackColor = Color.FromArgb(240, 240, 240); // Gris très clair
+                        e.CellStyle.SelectionBackColor = Color.FromArgb(220, 220, 220); // Gris clair pour la sélection
                     }
                     else
                     {
-                        // Colorer la ligne en fonction de la similarité (couleurs opaques pour éviter les problèmes de rendu)
-                        Color rowColor = GetSimilarityColorOpaque(result.SimilarityPercentage);
-                        e.CellStyle.BackColor = rowColor;
+                        // Colorer la cellule en fonction de la similarité
+                        Color cellColor = GetSimilarityColorOpaque(result.SimilarityPercentage);
+                        e.CellStyle.BackColor = cellColor;
 
                         // Assombrir légèrement pour la sélection
                         Color selectionColor = Color.FromArgb(
-                            Math.Max(0, rowColor.R - 40),
-                            Math.Max(0, rowColor.G - 40),
-                            Math.Max(0, rowColor.B - 40)
+                            Math.Max(0, cellColor.R - 40),
+                            Math.Max(0, cellColor.G - 40),
+                            Math.Max(0, cellColor.B - 40)
                         );
                         e.CellStyle.SelectionBackColor = selectionColor;
                     }
@@ -548,12 +552,6 @@ namespace ImageDup
                         btnDeleteImage2.Enabled = !result.IsImage2Deleted && File.Exists(result.Image2Path);
                         btnDeleteImage1.Visible = true;
                         btnDeleteImage2.Visible = true;
-
-                        // Marquer la ligne si une image a été supprimée
-                        if (result.IsImage1Deleted || result.IsImage2Deleted)
-                        {
-                            selectedRow.DefaultCellStyle.BackColor = Color.LightBlue;
-                        }
                     }
                 }
                 finally
@@ -730,8 +728,21 @@ namespace ImageDup
                         btnDeleteImage2.Enabled = false;
                     }
 
-                    // Forcer le rafraîchissement de la ligne
-                    dgvResults.InvalidateRow(row.Index);
+                    // Marquer toutes les autres occurrences de cette image comme supprimées
+                    foreach (var compResult in comparisonResults)
+                    {
+                        if (compResult.Image1Path == imagePath)
+                        {
+                            compResult.IsImage1Deleted = true;
+                        }
+                        if (compResult.Image2Path == imagePath)
+                        {
+                            compResult.IsImage2Deleted = true;
+                        }
+                    }
+
+                    // Forcer le rafraîchissement de toutes les lignes
+                    dgvResults.Invalidate();
                 }
                 catch (Exception ex)
                 {

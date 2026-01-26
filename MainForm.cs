@@ -586,25 +586,44 @@ namespace ImageDup
                 {
                     using (var img = Image.FromFile(imagePath))
                     {
-                        // Créer une copie de l'image
-                        var bitmap = new Bitmap(img);
-
-                        // Corriger l'orientation selon les métadonnées EXIF
+                        // Déterminer l'orientation EXIF avant de créer la miniature
+                        int orientation = 1;
                         if (Array.IndexOf(img.PropertyIdList, 0x0112) > -1)
                         {
-                            var orientation = (int)img.GetPropertyItem(0x0112).Value[0];
-                            switch (orientation)
-                            {
-                                case 3: // Rotation 180°
-                                    bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
-                                    break;
-                                case 6: // Rotation 90° horaire
-                                    bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
-                                    break;
-                                case 8: // Rotation 90° anti-horaire
-                                    bitmap.RotateFlip(RotateFlipType.Rotate270FlipNone);
-                                    break;
-                            }
+                            orientation = (int)img.GetPropertyItem(0x0112).Value[0];
+                        }
+
+                        // Créer une miniature optimisée (beaucoup plus rapide que de charger l'image complète)
+                        // Taille max : 800x600 (largement suffisant pour un affichage de 346x238)
+                        int maxWidth = 800;
+                        int maxHeight = 600;
+
+                        float ratioX = (float)maxWidth / img.Width;
+                        float ratioY = (float)maxHeight / img.Height;
+                        float ratio = Math.Min(ratioX, ratioY);
+
+                        int newWidth = (int)(img.Width * ratio);
+                        int newHeight = (int)(img.Height * ratio);
+
+                        var bitmap = new Bitmap(newWidth, newHeight);
+                        using (var graphics = Graphics.FromImage(bitmap))
+                        {
+                            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                            graphics.DrawImage(img, 0, 0, newWidth, newHeight);
+                        }
+
+                        // Corriger l'orientation selon les métadonnées EXIF
+                        switch (orientation)
+                        {
+                            case 3: // Rotation 180°
+                                bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                                break;
+                            case 6: // Rotation 90° horaire
+                                bitmap.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                                break;
+                            case 8: // Rotation 90° anti-horaire
+                                bitmap.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                                break;
                         }
 
                         pictureBox.Image = bitmap;
